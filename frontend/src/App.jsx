@@ -28,7 +28,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/match-job",
+        "https://resumereviewer-fss9.onrender.com/match-job",
         formData
       );
 
@@ -36,7 +36,7 @@ function App() {
 
       const data = response.data;
 
-      const matchData = data.match || data.analysis || data.result;
+      const matchData = data?.match || data?.analysis || data?.result;
 
       if (!matchData) {
         console.log("Invalid backend response:", data);
@@ -109,7 +109,7 @@ function App() {
 
             <h3>Matched Skills</h3>
             <div className="skills">
-              {(result.matched_skills || []).map((skill, i) => (
+              {(result?.matched_skills || []).map((skill, i) => (
                 <span key={i} className="skill">
                   {skill}
                 </span>
