@@ -49,4 +49,3 @@ Future Improvements
 -	Improve applicant tracking system scoring model.
 -	Improve UI dashboard.
 -	Add a cover letter generator that tailors content to specific job description using extracted resume information.
-
