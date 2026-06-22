@@ -36,13 +36,13 @@ function App() {
 
       const data = response.data;
 
-      const matchData = data?.match || data?.analysis || data?.result;
+      const matchData = data?.match;
 
-      if (!matchData) {
+      if (!data?.match) {
         console.log("Invalid backend response:", data);
-        alert("Backend did not return usable match data. Check console.");
+        alert("No match data returned from backend.");
         return;
-      }
+    }
 
       setResult(matchData);
 
@@ -100,7 +100,7 @@ function App() {
           <div className="results">
 
             <h2 className="score">
-              Match Score: {getScore(result)}%
+              Match Score: {getScore(result) || 0}%
             </h2>
 
             <h3 className={`verdict ${getVerdictClass(result.verdict)}`}>
