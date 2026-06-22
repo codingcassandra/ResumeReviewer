@@ -1,15 +1,17 @@
 import json
 import re
-from urllib import response
-from groq import Groq
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+from groq import Groq
 
 load_dotenv()
 
-client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
-)
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    raise ValueError("GROQ_API_KEY is missing. Check your .env file.")
+
+client = Groq(api_key=api_key)
 
 
 def extract_json(text: str):
@@ -28,7 +30,6 @@ def extract_json(text: str):
     return None
 
 
-
 def normalize(skill):
     return (
         skill.strip()
@@ -37,7 +38,6 @@ def normalize(skill):
         .replace("programming", "")
         .strip()
     )
-
 
 
 def extract_resume_skills(text):
@@ -58,7 +58,6 @@ def extract_resume_skills(text):
     return list(set(skills))
 
 
-
 def extract_job_skills(job_text):
     return [
         line.strip().lstrip("-•* ").strip()
@@ -72,32 +71,31 @@ def analyze_match(resume_text, job_description):
     resume_text = resume_text[:4000]
     job_description = job_description[:4000]
 
+    # ✅ FIXED: prompt is INSIDE the function (this was your main bug)
     prompt = f"""
 You are an expert ATS (Applicant Tracking System).
 
-Extract and compare skills from resume vs job description.
+You MUST return ONLY valid JSON.
+Do NOT include explanations.
+Do NOT include markdown.
+Do NOT include backticks.
 
-Return ONLY valid JSON.
-
-Return this EXACT format:
+Return JSON in this exact format:
 
 {{
   "matched_skills": ["skill1", "skill2"],
   "missing_skills": ["skill1", "skill2"],
   "verdict": "Strong Match | Moderate Match | Weak Match",
-  "recommendation": "string"
+  "recommendation": "Exactly 3 sentences."
 }}
 
-RULES:
-- matched_skills must only include skills found in BOTH resume and job description
-- missing_skills must only include skills in job description but NOT in resume
-- DO NOT hallucinate skills
-
-RECOMMENDATION RULES:
-- MUST be EXACTLY 3 sentences
-- Sentence 1: skill gap summary
-- Sentence 2: ONE project idea
-- Sentence 3: ONE specific course/certification (Coursera/Udemy/AWS/etc.)
+STRICT RULES:
+- Output must be VALID JSON ONLY
+- No extra text before or after JSON
+- No code blocks
+- No comments
+- No trailing commas
+- recommendation MUST be exactly 3 sentences
 
 RESUME:
 {resume_text}
@@ -107,19 +105,20 @@ JOB DESCRIPTION:
 """
 
     response = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
-    messages=[
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ],
-    temperature=0
-)
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0
+    )
 
     content = response.choices[0].message.content
+    print("RAW GROQ OUTPUT:\n", content)
 
-    parsed = extract_json(content)
+    parsed = extract_json(content.strip())
 
     if not parsed:
         return {
@@ -131,7 +130,6 @@ JOB DESCRIPTION:
             "recommendation": "Failed to parse AI response.",
             "raw_output": content
         }
-
 
     resume_skills = extract_resume_skills(resume_text)
 
@@ -145,16 +143,13 @@ JOB DESCRIPTION:
     job_skills = list(set(job_skills))
     resume_skills = list(set(resume_skills))
 
-
     matched_skills = [s for s in job_skills if s in resume_skills]
     missing_skills = [s for s in job_skills if s not in resume_skills]
-
 
     if len(job_skills) > 0:
         score = round((len(matched_skills) / len(job_skills)) * 100)
     else:
         score = 0
-
 
     if score >= 75:
         verdict = "Strong Match"
@@ -162,7 +157,6 @@ JOB DESCRIPTION:
         verdict = "Moderate Match"
     else:
         verdict = "Weak Match"
-
 
     return {
         "overall_match_score": score,
