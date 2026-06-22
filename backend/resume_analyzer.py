@@ -1,7 +1,15 @@
 import json
 import re
-from ollama import chat
+from urllib import response
+from groq import Groq
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
+)
 
 
 def extract_json(text: str):
@@ -98,16 +106,19 @@ JOB DESCRIPTION:
 {job_description}
 """
 
-    response = chat(
-        model="llama3:latest",
-        messages=[{"role": "user", "content": prompt}],
-        options={
-            "temperature": 0,
-            "num_predict": 600
+    response = client.chat.completions.create(
+    model="llama-3.3-70b-versatile",
+    messages=[
+        {
+            "role": "user",
+            "content": prompt
         }
-    )
+    ],
+    temperature=0
+)
 
-    content = response["message"]["content"]
+    content = response.choices[0].message.content
+
     parsed = extract_json(content)
 
     if not parsed:
